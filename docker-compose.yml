@@ -1,0 +1,112 @@
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: rentlora-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=supersecret
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - rentlora-network
+
+  user-service:
+    build: ./rentlora-user-service
+    container_name: rentlora-user-service
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_USER=admin
+      - MONGO_PASSWORD=supersecret
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - PORT=8001
+    depends_on:
+      - mongodb
+    networks:
+      - rentlora-network
+
+  property-service:
+    build: ./rentlora-property-service
+    container_name: rentlora-property-service
+    ports:
+      - "8002:8002"
+    environment:
+      - MONGO_USER=admin
+      - MONGO_PASSWORD=supersecret
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - PORT=8002
+    depends_on:
+      - mongodb
+    networks:
+      - rentlora-network
+
+  booking-service:
+    build: ./rentlora-booking-service
+    container_name: rentlora-booking-service
+    ports:
+      - "8003:8003"
+    environment:
+      - MONGO_USER=admin
+      - MONGO_PASSWORD=supersecret
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - PORT=8003
+    depends_on:
+      - mongodb
+    networks:
+      - rentlora-network
+
+  payment-service:
+    build: ./rentlora-payment-service
+    container_name: rentlora-payment-service
+    ports:
+      - "8004:8004"
+    environment:
+      - MONGO_USER=admin
+      - MONGO_PASSWORD=supersecret
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - PORT=8004
+      - BOOKING_SERVICE_URL=http://booking-service:8003
+    depends_on:
+      - mongodb
+      - booking-service
+    networks:
+      - rentlora-network
+
+  ui:
+    build: ./rentlora-ui
+    container_name: rentlora-ui
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_USER_API_URL=http://localhost:8001/api/users
+      - VITE_PROPERTY_API_URL=http://localhost:8002/api/properties
+      - VITE_BOOKING_API_URL=http://localhost:8003/api/bookings
+      - VITE_PAYMENT_API_URL=http://localhost:8004/api/payments
+      - VITE_AI_API_URL=http://localhost:8005/api/ai
+    networks:
+      - rentlora-network
+
+  rentlora-ai-service:
+    build:
+      context: ./rentlora-ai-service
+    container_name: rentlora-ai-service
+    ports:
+      - "8005:8005"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    networks:
+      - rentlora-network
+
+networks:
+  rentlora-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
